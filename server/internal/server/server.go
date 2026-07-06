@@ -1,4 +1,4 @@
-// Package server exposes the SDVC store over HTTP.
+// Package server exposes the sdvc store over HTTP.
 package server
 
 import (

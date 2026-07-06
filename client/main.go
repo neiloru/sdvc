@@ -24,6 +24,7 @@ import (
 
 	"sdvc/client/internal/config"
 	"sdvc/client/internal/engine"
+	"sdvc/client/internal/hidden"
 	"sdvc/client/internal/notify"
 	"sdvc/client/internal/tray"
 	"sdvc/client/internal/web"
@@ -111,5 +112,7 @@ func openBrowser(url string) {
 	default: // linux, steamos, others
 		cmd, args = "xdg-open", []string{url}
 	}
-	_ = exec.Command(cmd, args...).Start()
+	c := exec.Command(cmd, args...)
+	hidden.Apply(c)
+	_ = c.Start()
 }

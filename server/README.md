@@ -1,4 +1,4 @@
-# SDVC Server
+# sdvc server
 
 A save-data version control server. It stores uploaded zip archives per **user** and **repo**,
 verifies each upload against a client-supplied SHA-256 hash, and serves any historical version or

@@ -34,8 +34,8 @@ The tray uses native APIs. **Windows builds are pure Go**; **macOS and Linux bui
 CGO** and must be built on (or cross-toolchained for) that platform:
 
 ```powershell
-# Windows (pure Go)
-$env:GOOS="windows"; $env:GOARCH="amd64"; go build -o sdvc-client.exe .
+# Windows (pure Go) — the -H=windowsgui flag prevents a console window from opening
+$env:GOOS="windows"; $env:GOARCH="amd64"; go build -ldflags "-H=windowsgui" -o sdvc-client.exe .
 ```
 
 ```bash

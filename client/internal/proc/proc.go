@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"sdvc/client/internal/hidden"
 )
 
 // AnyRunning reports whether any of the named processes is currently running.
@@ -47,7 +49,9 @@ func listProcessNames() ([]string, error) {
 
 func listWindows() ([]string, error) {
 	// CSV, no header. First column is the image name, e.g. "game.exe".
-	out, err := exec.Command("tasklist", "/FO", "CSV", "/NH").Output()
+	cmd := exec.Command("tasklist", "/FO", "CSV", "/NH")
+	hidden.Apply(cmd)
+	out, err := cmd.Output()
 	if err != nil {
 		return nil, err
 	}
