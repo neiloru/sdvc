@@ -8,7 +8,6 @@ package proc
 
 import (
 	"bufio"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
@@ -76,9 +75,10 @@ func listWindows() ([]string, error) {
 }
 
 func listUnix() ([]string, error) {
-	// Prefer the actual executable path when available (Linux /proc).
-	// Fall back to `ps`'s `comm` output when we can't read /proc/<pid>/exe
-	out, err := exec.Command("ps", "-A", "-o", "pid=").Output()
+	// Use the full command line so processes can be distinguished by the
+	// application or script they actually launched, instead of only the base
+	// executable name returned by comm.
+	out, err := exec.Command("ps", "-A", "-o", "cmd=").Output()
 	if err != nil {
 		return nil, err
 	}
@@ -86,27 +86,15 @@ func listUnix() ([]string, error) {
 	sc := bufio.NewScanner(strings.NewReader(string(out)))
 	sc.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
 	for sc.Scan() {
-		pid := strings.TrimSpace(sc.Text())
-		if pid == "" {
-			continue
-		}
-		// Try to read the /proc/<pid>/exe symlink (Linux/steamos).
-		exePath, err := os.Readlink(filepath.Join("/proc", pid, "exe"))
-		if err == nil && exePath != "" {
-			names = append(names, normalize(filepath.Base(exePath)))
-			continue
-		}
-
-		// Fallback: ask ps for the command name for this pid.
-		out2, err2 := exec.Command("ps", "-p", pid, "-o", "comm=").Output()
-		if err2 != nil {
-			continue
-		}
-		line := strings.TrimSpace(string(out2))
+		line := strings.TrimSpace(sc.Text())
 		if line == "" {
 			continue
 		}
-		names = append(names, normalize(filepath.Base(line)))
+		fields := strings.Fields(line)
+		if len(fields) == 0 {
+			continue
+		}
+		names = append(names, normalize(filepath.Base(fields[0])))
 	}
 	return names, sc.Err()
 }
