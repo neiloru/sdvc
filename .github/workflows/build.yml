@@ -24,16 +24,19 @@ jobs:
             goos: windows
             goarch: amd64
             ext: .exe
+            client_ldflags: "-H=windowsgui"
           - name: linux-amd64
             runner: ubuntu-latest
             goos: linux
             goarch: amd64
             ext: ""
+            client_ldflags: ""
           - name: macos-arm64
             runner: macos-14
             goos: darwin
             goarch: arm64
             ext: ""
+            client_ldflags: ""
 
     steps:
       - name: Checkout
@@ -69,7 +72,7 @@ jobs:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: "1"
-        run: go build -v -o "../dist/sdvc-client-${{ matrix.name }}${{ matrix.ext }}" .
+        run: go build -v -ldflags "${{ matrix.client_ldflags }}" -o "../dist/sdvc-client-${{ matrix.name }}${{ matrix.ext }}" .
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
