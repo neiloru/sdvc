@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>sdvc client</title>
+<style>
+  :root {
+    --bg: #0f1720; --panel: #17222e; --panel2: #1e2b3a; --text: #e6edf3;
+    --muted: #93a4b3; --accent: #3b82f6; --ok: #22c55e; --warn: #f59e0b;
+    --err: #ef4444; --border: #2a3a4c;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    background: var(--bg); color: var(--text); }
+  header { padding: 16px 24px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px; }
+  header h1 { font-size: 18px; margin: 0; }
+  header .tag { color: var(--muted); font-size: 13px; }
+  main { max-width: 980px; margin: 0 auto; padding: 24px; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 18px; margin-bottom: 20px; }
+  .card h2 { margin: 0 0 14px; font-size: 15px; }
+  label { display: block; font-size: 12px; color: var(--muted); margin: 8px 0 4px; }
+  input[type=text], input[type=number] { width: 100%; padding: 8px 10px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--panel2); color: var(--text); font-size: 14px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  button { cursor: pointer; border: none; border-radius: 8px; padding: 8px 14px; font-size: 13px;
+    background: var(--accent); color: white; }
+  button.secondary { background: var(--panel2); border: 1px solid var(--border); color: var(--text); }
+  button.danger { background: transparent; border: 1px solid var(--err); color: var(--err); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .repo { border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 12px;
+    background: var(--panel2); }
+  .repo-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .repo-title { font-weight: 600; }
+  .badge { font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); }
+  .badge.on { color: var(--ok); border-color: var(--ok); }
+  .badge.run { color: var(--warn); border-color: var(--warn); }
+  .badge.err { color: var(--err); border-color: var(--err); }
+  .status { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .muted { color: var(--muted); font-size: 12px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+  .versions { margin-top: 10px; display: none; }
+  .edit-box { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border); display: none; }
+  .toast { position: fixed; bottom: 20px; right: 20px; background: var(--panel2);
+    border: 1px solid var(--border); padding: 12px 16px; border-radius: 10px; display: none; max-width: 360px; }
+  .toast.err { border-color: var(--err); }
+  .toast.ok { border-color: var(--ok); }
+  .hint { font-size: 11px; color: var(--muted); margin-top: 4px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>sdvc</h1>
+  <span class="tag">save data version control - control panel</span>
+</header>
+<main>
+  <div class="card">
+    <h2>Server settings</h2>
+    <div class="row3">
+      <div>
+        <label>Server URL</label>
+        <input id="serverURL" type="text" placeholder="http://localhost:8080" />
+      </div>
+      <div>
+        <label>Poll interval (seconds)</label>
+        <input id="pollInterval" type="number" min="5" />
+      </div>
+      <div>
+        <label>Web UI port (restart to apply)</label>
+        <input id="webPort" type="number" min="1" />
+      </div>
+    </div>
+    <div class="actions">
+      <button onclick="saveSettings()">Save settings</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Add a repository</h2>
+    <div class="row">
+      <div>
+        <label>Display name (optional)</label>
+        <input id="n-name" type="text" placeholder="My Game Saves" />
+      </div>
+      <div>
+        <label>Save data folder</label>
+        <input id="n-folder" type="text" placeholder="C:\Users\me\Saved Games\MyGame" />
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>User name</label>
+        <input id="n-user" type="text" placeholder="alice" />
+      </div>
+      <div>
+        <label>Repo name</label>
+        <input id="n-repo" type="text" placeholder="mygame" />
+      </div>
+    </div>
+    <label>Process names (comma-separated) - sync only runs while these are NOT running</label>
+    <input id="n-processes" type="text" placeholder="MyGame.exe, launcher.exe" />
+    <div class="hint">On Steam Deck / SteamOS use the game's process/executable name.</div>
+    <div class="actions">
+      <label style="display:flex;align-items:center;gap:6px;margin:0;color:var(--text)">
+        <input id="n-enabled" type="checkbox" checked /> Enabled
+      </label>
+      <button onclick="addRepo()">Add repository</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Repositories</h2>
+    <div id="repos"></div>
+    <div id="repos-empty" class="muted">No repositories configured yet.</div>
+  </div>
+</main>
+
+<div id="toast" class="toast"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+function toast(msg, kind) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.className = "toast " + (kind || "");
+  t.style.display = "block";
+  setTimeout(() => { t.style.display = "none"; }, 4000);
+}
+
+async function api(method, url, body) {
+  const opts = { method, headers: {} };
+  if (body !== undefined) { opts.headers["Content-Type"] = "application/json"; opts.body = JSON.stringify(body); }
+  const res = await fetch(url, opts);
+  const text = await res.text();
+  let data = null;
+  try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+  if (!res.ok) { throw new Error((data && data.error) || res.statusText); }
+  return data;
+}
+
+async function loadSettings() {
+  const s = await api("GET", "/api/settings");
+  $("serverURL").value = s.serverURL;
+  $("pollInterval").value = s.pollIntervalSeconds;
+  $("webPort").value = s.webPort;
+}
+
+async function saveSettings() {
+  try {
+    await api("PUT", "/api/settings", {
+      serverURL: $("serverURL").value.trim(),
+      pollIntervalSeconds: parseInt($("pollInterval").value, 10),
+      webPort: parseInt($("webPort").value, 10),
+    });
+    toast("Settings saved", "ok");
+  } catch (e) { toast(e.message, "err"); }
+}
+
+function parseProcesses(v) {
+  return v.split(",").map(s => s.trim()).filter(Boolean);
+}
+
+async function addRepo() {
+  try {
+    await api("POST", "/api/repos", {
+      name: $("n-name").value.trim(),
+      folder: $("n-folder").value.trim(),
+      user: $("n-user").value.trim(),
+      repo: $("n-repo").value.trim(),
+      processes: parseProcesses($("n-processes").value),
+      enabled: $("n-enabled").checked,
+    });
+    ["n-name","n-folder","n-user","n-repo","n-processes"].forEach(id => $(id).value = "");
+    toast("Repository added", "ok");
+    loadRepos();
+  } catch (e) { toast(e.message, "err"); }
+}
+
+function statusBadge(r) {
+  const s = r.status || {};
+  if (s.processRunning) return '<span class="badge run">game running</span>';
+  if (r.lastError) return '<span class="badge err">error</span>';
+  if (r.enabled) return '<span class="badge on">enabled</span>';
+  return '<span class="badge">disabled</span>';
+}
+
+function esc(s) { return (s || "").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+// Track which panels are open so the periodic refresh never closes them.
+const openHistory = new Set();
+const openEdit = new Set();
+
+function cardOf(id) { return $("repos").querySelector('.repo[data-id="' + id + '"]'); }
+
+function createCard(r) {
+  const el = document.createElement("div");
+  el.className = "repo";
+  el.dataset.id = r.id;
+  el.innerHTML = `
+    <div class="repo-head">
+      <div>
+        <div class="repo-title"></div>
+        <div class="muted repo-sub"></div>
+      </div>
+      <label style="display:flex;align-items:center;gap:6px;margin:0">
+        <input type="checkbox" class="enable-toggle"/> on
+      </label>
+    </div>
+    <div class="muted folder-line" style="margin-top:6px"></div>
+    <div class="muted proc-line"></div>
+    <div class="status status-line"></div>
+    <div class="actions">
+      <button class="btn-upload">Upload now</button>
+      <button class="secondary btn-download">Download latest</button>
+      <button class="secondary btn-history">History</button>
+      <button class="secondary btn-edit">Edit</button>
+      <button class="danger btn-remove">Remove</button>
+    </div>
+    <div class="edit-box"></div>
+    <div class="versions"></div>
+  `;
+  el.querySelector(".enable-toggle").addEventListener("change", e => toggleRepo(r.id, e.target.checked));
+  el.querySelector(".btn-upload").addEventListener("click", () => uploadNow(r.id));
+  el.querySelector(".btn-download").addEventListener("click", () => downloadLatest(r.id));
+  el.querySelector(".btn-history").addEventListener("click", () => toggleVersions(r.id));
+  el.querySelector(".btn-edit").addEventListener("click", () => toggleEdit(r.id));
+  el.querySelector(".btn-remove").addEventListener("click", () => removeRepo(r.id));
+  return el;
+}
+
+function updateCard(el, r) {
+  const s = r.status || {};
+  el._repo = r;
+  el.querySelector(".repo-title").innerHTML = esc(r.name) + " " + statusBadge(r);
+  el.querySelector(".repo-sub").textContent =
+    `${r.user}/${r.repo} · v${r.lastSyncedVersion || 0} local · latest v${s.latestServerVersion || 0} on server`;
+  const toggle = el.querySelector(".enable-toggle");
+  if (document.activeElement !== toggle) toggle.checked = !!r.enabled;
+  el.querySelector(".folder-line").textContent = "📁 " + r.folder;
+  el.querySelector(".proc-line").textContent = "⚙️ " +
+    (r.processes && r.processes.length ? r.processes.join(", ") : "no processes set (always syncs)");
+  el.querySelector(".status-line").textContent =
+    (s.message || "idle") + (r.lastError ? " · " + r.lastError : "");
+  el.querySelector(".btn-upload").disabled = !!s.processRunning;
+  el.querySelector(".btn-download").disabled = !!s.processRunning;
+}
+
+async function loadRepos() {
+  const repos = await api("GET", "/api/repos");
+  const wrap = $("repos");
+  $("repos-empty").style.display = repos.length ? "none" : "block";
+  const seen = new Set();
+  for (const r of repos) {
+    seen.add(r.id);
+    let el = cardOf(r.id);
+    if (!el) { el = createCard(r); wrap.appendChild(el); }
+    updateCard(el, r);
+  }
+  wrap.querySelectorAll(".repo").forEach(el => {
+    if (!seen.has(el.dataset.id)) el.remove();
+  });
+}
+
+async function toggleRepo(id, enabled) {
+  const el = cardOf(id);
+  const r = el ? el._repo : null;
+  if (!r) return;
+  try {
+    await api("PUT", "/api/repos/" + id, {
+      name: r.name, user: r.user, repo: r.repo, folder: r.folder,
+      processes: r.processes || [], enabled,
+    });
+    loadRepos();
+  } catch (e) { toast(e.message, "err"); }
+}
+
+async function removeRepo(id) {
+  if (!confirm("Remove this repository from the client? Server data is kept.")) return;
+  try { await api("DELETE", "/api/repos/" + id); toast("Removed", "ok"); loadRepos(); }
+  catch (e) { toast(e.message, "err"); }
+}
+
+async function uploadNow(id) {
+  try {
+    await api("POST", "/api/repos/" + id + "/upload");
+    toast("Upload started", "ok");
+    setTimeout(() => { loadRepos(); if (openHistory.has(id)) loadVersions(id); }, 800);
+  } catch (e) { toast(e.message, "err"); }
+}
+
+async function downloadLatest(id) {
+  if (!confirm("Download the latest version and replace local save data?")) return;
+  try {
+    await api("POST", "/api/repos/" + id + "/download", { version: 0 });
+    toast("Downloaded latest", "ok");
+    loadRepos();
+  } catch (e) { toast(e.message, "err"); }
+}
+
+// ----- Edit -----
+function toggleEdit(id) {
+  const el = cardOf(id); if (!el) return;
+  const box = el.querySelector(".edit-box");
+  if (box.style.display === "block") { box.style.display = "none"; openEdit.delete(id); return; }
+  const r = el._repo;
+  box.innerHTML = `
+    <div class="row">
+      <div><label>Display name</label><input type="text" class="e-name"/></div>
+      <div><label>Save data folder</label><input type="text" class="e-folder"/></div>
+    </div>
+    <div class="row">
+      <div><label>User name</label><input type="text" class="e-user"/></div>
+      <div><label>Repo name</label><input type="text" class="e-repo"/></div>
+    </div>
+    <label>Process names (comma-separated)</label>
+    <input type="text" class="e-proc"/>
+    <div class="actions">
+      <button class="btn-save">Save changes</button>
+      <button class="secondary btn-cancel">Cancel</button>
+    </div>`;
+  box.querySelector(".e-name").value = r.name || "";
+  box.querySelector(".e-folder").value = r.folder || "";
+  box.querySelector(".e-user").value = r.user || "";
+  box.querySelector(".e-repo").value = r.repo || "";
+  box.querySelector(".e-proc").value = (r.processes || []).join(", ");
+  box.querySelector(".btn-save").addEventListener("click", () => saveEdit(id));
+  box.querySelector(".btn-cancel").addEventListener("click", () => { box.style.display = "none"; openEdit.delete(id); });
+  box.style.display = "block";
+  openEdit.add(id);
+}
+
+async function saveEdit(id) {
+  const el = cardOf(id); if (!el) return;
+  const box = el.querySelector(".edit-box");
+  const r = el._repo;
+  try {
+    await api("PUT", "/api/repos/" + id, {
+      name: box.querySelector(".e-name").value.trim(),
+      folder: box.querySelector(".e-folder").value.trim(),
+      user: box.querySelector(".e-user").value.trim(),
+      repo: box.querySelector(".e-repo").value.trim(),
+      processes: parseProcesses(box.querySelector(".e-proc").value),
+      enabled: r.enabled,
+    });
+    box.style.display = "none"; openEdit.delete(id);
+    toast("Saved", "ok");
+    loadRepos();
+  } catch (e) { toast(e.message, "err"); }
+}
+
+// ----- History -----
+function toggleVersions(id) {
+  const el = cardOf(id); if (!el) return;
+  const box = el.querySelector(".versions");
+  if (box.style.display === "block") { box.style.display = "none"; openHistory.delete(id); return; }
+  box.style.display = "block";
+  openHistory.add(id);
+  loadVersions(id);
+}
+
+async function loadVersions(id) {
+  const el = cardOf(id); if (!el) return;
+  const box = el.querySelector(".versions");
+  box.innerHTML = '<span class="muted">Loading…</span>';
+  try {
+    const idx = await api("GET", "/api/repos/" + id + "/versions");
+    const versions = (idx.versions || []).slice().sort((a, b) => b.version - a.version);
+    if (!versions.length) { box.innerHTML = '<span class="muted">No versions on server yet.</span>'; return; }
+    let html = '<table><tr><th>Version</th><th>Size</th><th>When</th><th>Hash</th><th></th></tr>';
+    for (const v of versions) {
+      html += `<tr>
+        <td>v${v.version}</td>
+        <td>${(v.size/1024).toFixed(1)} KB</td>
+        <td>${new Date(v.timestamp).toLocaleString()}</td>
+        <td class="muted">${esc(v.hash.slice(0,12))}…</td>
+        <td><button class="secondary btn-restore" data-version="${v.version}">Restore</button></td>
+      </tr>`;
+    }
+    html += '</table>';
+    box.innerHTML = html;
+    box.querySelectorAll(".btn-restore").forEach(b =>
+      b.addEventListener("click", () => restore(id, parseInt(b.dataset.version, 10))));
+  } catch (e) { box.innerHTML = '<span class="muted">' + esc(e.message) + '</span>'; }
+}
+
+async function restore(id, version) {
+  if (!confirm("Restore version " + version + "? This replaces local save data.")) return;
+  try {
+    await api("POST", "/api/repos/" + id + "/download", { version });
+    toast("Restored v" + version, "ok");
+    loadRepos();
+  } catch (e) { toast(e.message, "err"); }
+}
+
+loadSettings().catch(e => toast(e.message, "err"));
+loadRepos().catch(e => toast(e.message, "err"));
+setInterval(() => loadRepos().catch(() => {}), 5000);
+</script>
+</body>
+</html>

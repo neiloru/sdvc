@@ -1,0 +1,30 @@
+# Build output
+/dist/
+bin/
+sdvc-client
+sdvc-server
+sdvc-client.exe
+sdvc-server.exe
+
+# Go
+*.exe
+*.test
+*.out
+*.o
+*.a
+*.so
+coverage.out
+vendor/
+
+# Local config / runtime data
+*.local
+*.log
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+
+data
